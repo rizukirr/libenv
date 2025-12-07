@@ -63,4 +63,4 @@ Gets the value of an environment variable.
 
 ## License
 
-See LICENSE file for details.
+See [LICENCE](LICENSE) file for details.
