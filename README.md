@@ -1,6 +1,6 @@
 # libenv
 
-A simple single-header C library for loading environment variables from .env files.
+A single-header C library for loading `.env` files into a fast internal key/value store.
 
 ## Usage
 
@@ -49,17 +49,24 @@ ANOTHER_VAR=another_value
 
 ### `int libenv_load(char *env_file)`
 
-Loads environment variables from the specified file.
+Loads key/value pairs from the specified file into libenv's internal store.
 
 - Returns `0` on success
 - Returns `-1` on failure (file not found)
+- Replaces any previously loaded libenv data
 
 ### `char *libenv_get(char *key)`
 
-Gets the value of an environment variable.
+Gets the value of a key from libenv's internal store.
 
 - Returns pointer to the value string
-- Returns `NULL` if the variable is not set
+- Returns `NULL` if the key is not loaded
+
+## Notes
+
+- `libenv` no longer calls `setenv()` or reads from `getenv()`
+- Values loaded by `libenv_load()` are only visible through `libenv_get()`
+- Lookups use an internal hash table optimized for repeated reads
 
 ## License
 
