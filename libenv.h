@@ -3,6 +3,27 @@
 
 #include <stddef.h>
 
+#ifdef _WIN32
+#include <windows.h>
+
+#define LIBENV_MALLOC(size) HeapAlloc(GetProcessHeap(), 0, (size))
+#define LIBENV_CALLOC(count, size)                                             \
+  HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (count) * (size))
+#define LIBENV_FREE(ptr)                                                       \
+  do {                                                                         \
+    if (ptr)                                                                   \
+      HeapFree(GetProcessHeap(), 0, (ptr));                                    \
+  } while (0)
+
+#else /* Linux / macOS / POSIX */
+#include <stdlib.h>
+
+#define LIBENV_MALLOC(size) malloc(size)
+#define LIBENV_CALLOC(count, size) calloc(count, size)
+#define LIBENV_FREE(ptr) free(ptr)
+
+#endif
+
 int libenv_load(char *env_file);
 char *libenv_get(char *key);
 
@@ -39,8 +60,8 @@ static size_t libenv_hash(const char *str) {
 }
 
 static void libenv_store_reset(libenv_store *store) {
-  free(store->entries);
-  free(store->buffer);
+  LIBENV_FREE(store->entries);
+  LIBENV_FREE(store->buffer);
   store->entries = NULL;
   store->buffer = NULL;
   store->capacity = 0;
@@ -100,7 +121,7 @@ static int libenv_read_file(const char *path, char **buffer_out,
     return -1;
   }
 
-  buffer = (char *)malloc((size_t)file_size + 1);
+  buffer = (char *)LIBENV_MALLOC((size_t)file_size + 1);
   if (buffer == NULL) {
     fclose(file);
     return -1;
@@ -109,7 +130,7 @@ static int libenv_read_file(const char *path, char **buffer_out,
   read_size = fread(buffer, 1, (size_t)file_size, file);
   fclose(file);
   if (read_size != (size_t)file_size) {
-    free(buffer);
+    LIBENV_FREE(buffer);
     return -1;
   }
 
@@ -135,10 +156,9 @@ int libenv_load(char *env_file) {
   }
 
   next.capacity = libenv_next_capacity(line_count * 2);
-  next.entries =
-      (libenv_entry *)calloc(next.capacity, sizeof(libenv_entry));
+  next.entries = (libenv_entry *)LIBENV_CALLOC(next.capacity, sizeof(libenv_entry));
   if (next.entries == NULL) {
-    free(next.buffer);
+    LIBENV_FREE(next.buffer);
     return -1;
   }
 
